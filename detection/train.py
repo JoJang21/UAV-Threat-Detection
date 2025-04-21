@@ -1,8 +1,8 @@
 from ultralytics import YOLO
 
-model = YOLO('yolov8n.pt')  # Nano model (fastest, less accurate)
+# model = YOLO('yolov8n.pt')  # Nano model (fastest, less accurate)
 # model = YOLO('yolov8s.pt')  # Small model
-# model = YOLO('yolov8m.pt')  # Medium model
+model = YOLO('yolov8m.pt')  # Medium model
 # model = YOLO('yolov8l.pt')  # Large model
 
 # Train the model

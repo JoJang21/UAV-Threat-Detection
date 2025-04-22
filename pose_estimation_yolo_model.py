@@ -169,6 +169,9 @@ def iterate_images(folder_path):
                 result = model(image_path)
                 save_path = os.path.join(save_dir, f"pose_{img_name}")
                 show_pose_result(result, img_name, save_path=save_path)
+                gt_level = extract_ground_truth_from_name(img_name)
+                total += 1
+                predicted = None
 
                 for person in result[0].keypoints.xy:
                     keypoints = person.cpu().numpy()
@@ -224,9 +227,7 @@ def iterate_images(folder_path):
                     print("l_arm_exists: ", l_arm_exists, " l_angle: ", l_angle)
                     print("r_arm_exists: ", r_arm_exists, " r_angle: ", r_angle)
                     print("pre one_hand: ", one_hand)
-                    gt_level = extract_ground_truth_from_name(img_name)
-                    total += 1
-
+                    
                     if img_name[0] == "p": #if detected gun is a pistol
                         print("PISTOL")
                         # Differentiating between 1 hand and 2 hands:  if one arm is obtuse angle (>135), or if arm (wrist and elbow) doesnt exist
@@ -238,16 +239,16 @@ def iterate_images(folder_path):
                             one_hand = True
                             pistol_hand = "RIGHT"
                         elif (not l_arm_exists) and (not r_arm_exists):
-                            print("THREAT LEVEL 2")
-                            correct += (gt_level == 2)
+                            print("THREAT LEVEL 1")
+                            predicted = 1
                             continue
 
                         # below code will work mostly for one hand?????
                         if (l_arm_exists and l_angle > 120):
                             if (r_arm_exists and r_angle > 150):
                                 one_hand = False
-                                print("THREAT LEVEL 2")
-                                correct += (gt_level == 2)
+                                print("THREAT LEVEL 1")
+                                predicted = 1
                                 #continue
                             elif (r_arm_exists and r_angle < 100):
                                 one_hand = True
@@ -255,8 +256,8 @@ def iterate_images(folder_path):
                         if (r_arm_exists and r_angle > 120):
                             if (l_arm_exists and l_angle > 150):
                                 one_hand = False
-                                print("THREAT LEVEL 2")
-                                correct += (gt_level == 2)
+                                print("THREAT LEVEL 1")
+                                predicted = 1
                                 #continue
                             elif (l_arm_exists and l_angle < 100):
                                 one_hand = True
@@ -282,12 +283,12 @@ def iterate_images(folder_path):
                             if pistol_hand == "LEFT":
 
                                 if within_circle(r_shoulder, l_wrist, 20) or l_mod_wrist < r_shoulder[0] or l_mod_wrist > l_shoulder[0] + 20:
-                                    print("THREAT LEVEL 2")
-                                    correct += (gt_level == 2)
+                                    print("THREAT LEVEL 1")
+                                    predicted = 1
                                     continue
                                 elif l_mod_wrist <= l_shoulder[0] or within_circle(l_shoulder, l_wrist, 20) or (r_eye_exists and (l_mod_wrist >= r_eye[0])): #use r_ear?
                                     print("THREAT LEVEL 3") #yes aim
-                                    correct += (gt_level == 3)
+                                    predicted = 3
                                     continue
                                 else:
                                     print("One Left Hand: Couldn't Determine")
@@ -295,12 +296,12 @@ def iterate_images(folder_path):
                             elif pistol_hand == "RIGHT":
 
                                 if within_circle(l_shoulder, r_wrist, 20) or r_mod_wrist > l_shoulder[0] or r_mod_wrist < max(r_shoulder[0] - 20, 0):
-                                    print("THREAT LEVEL 2")
-                                    correct += (gt_level == 2)
+                                    print("THREAT LEVEL 1")
+                                    predicted = 1
                                     continue
                                 elif r_mod_wrist >=r_shoulder[0] or within_circle(r_shoulder, r_wrist, 20) or (l_eye_exists and (r_mod_wrist <= l_eye[0])): #use l_ear?
                                     print("THREAT LEVEL 3") # yes aim
-                                    correct += (gt_level == 3)
+                                    predicted = 3
                                     continue
                                 else:
                                     print("One Right Hand: Couldn't Determine")
@@ -326,12 +327,12 @@ def iterate_images(folder_path):
                                 rightmost_facial_ftr = r_shoulder[0]
 
                             if (wrist_midpoint > leftmost_facial_ftr) or (wrist_midpoint < rightmost_facial_ftr):
-                                print("THREAT LEVEL 2")
-                                correct += (gt_level == 2)
+                                print("THREAT LEVEL 1")
+                                predicted = 1
                                 continue
                             else:
                                 print("THREAT LEVEL 3")
-                                correct += (gt_level == 3)
+                                predicted = 3
                                 continue
 
 
@@ -361,17 +362,17 @@ def iterate_images(folder_path):
                         print("wrists_width: ", wrists_width)
                         print("shoulders_width: ", shoulders_width)
                         if wrists_width > 0.7 * shoulders_width:
-                            print("THREAT LEVEL 2, r1")
-                            correct += (gt_level == 2)
+                            print("THREAT LEVEL 1, r1")
+                            predicted = 1
                             continue
                         if (l_wrist[0] < r_shoulder[0] and r_wrist[0] < max(r_shoulder[0] - 10, 0)) or (r_wrist[0] > l_shoulder[0] and l_wrist[0] > l_shoulder[0] + 10):
-                            print("THREAT LEVEL 2, r2") # both wrists are away from shoulder,  -20? -15?
-                            correct += (gt_level == 2)
+                            print("THREAT LEVEL 1, r2") # both wrists are away from shoulder,  -20? -15?
+                            predicted = 1
                             # check arm angle?????
                             continue
                         if (l_wrist[0] > l_shoulder[0] + 0.4*shoulders_width) or (r_wrist[0] < max(r_shoulder[0] - 0.4*shoulders_width, 0)): #0.5? 0.6?
-                            print("THREAT LEVEL 2, r3") # both wrists are away from shoulder
-                            correct += (gt_level == 2)
+                            print("THREAT LEVEL 1, r3") # both wrists are away from shoulder
+                            predicted = 1
                             # check arm angle?????
                             continue
 
@@ -406,25 +407,27 @@ def iterate_images(folder_path):
                                 if support_arm == "LEFT" and within_circle(r_shoulder, (x, y), 0.33 * shoulders_width) or \
                                    support_arm == "RIGHT" and within_circle(l_shoulder, (x, y), 0.33 * shoulders_width):  #0.2?, 0.1?
                                     print("THREAT LEVEL 3")
-                                    correct += (gt_level == 3)
+                                    predicted = 3
                                     continue
                                 elif (support_arm == "LEFT" and within_circle(r_shoulder, (x, y), 0.5 * shoulders_width) \
                                       and l_angle >= 30 and l_angle <= 70) or \
                                      (support_arm == "RIGHT" and within_circle(l_shoulder, (x, y), 0.5 * shoulders_width) \
                                       and r_angle >= 30 and r_angle <= 70):  #0.2?, 0.1?
                                     print("THREAT LEVEL 3")
-                                    correct += (gt_level == 3)
+                                    predicted = 3
                                     continue
                                 else:
-                                    print("THREAT LEVEL 2")
-                                    correct += (gt_level == 2)
+                                    print("THREAT LEVEL 1")
+                                    predicted = 1
                                     continue
-
+                correct += (predicted == gt_level)                    
                 img.close()
             except Exception as e:
                 print(f"Error opening {image_path}: {e}")
 
     accuracy_percent = (correct / total) * 100
+    print(f"\n\nTotal images: {total}")
+    print(f"Correct predictions: {correct}")
     print(f"\n\nAccuracy: {accuracy_percent:.2f}%")
 
 

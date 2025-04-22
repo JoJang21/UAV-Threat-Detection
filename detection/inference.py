@@ -4,10 +4,10 @@ import cv2
 from shapely.geometry import box
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
-GUN_MODEL_PATH    = 'runs/detect/gun_detection7/weights/best.pt'
-PERSON_MODEL_PATH = 'yolov8m.pt'    # COCO‑pretrained
+GUN_MODEL_PATH    = 'runs/detect/gun_detection7/weights/last.pt'
+PERSON_MODEL_PATH = 'yolov8l.pt'    # COCO‑pretrained
 IMAGE_DIR         = './testset/train/images'
-OUTPUT_DIR        = './testset/train/merged_output'
+OUTPUT_DIR        = './testset/train/unmerged_output'
 IOU_THRESHOLD     = 0.3
 CONF_GUN          = 0.5
 CONF_PERSON       = 0.5
@@ -29,7 +29,7 @@ def iou(a, b):
 
 for img_path in glob.glob(os.path.join(IMAGE_DIR, '*.jpg')):
     # 1) inference
-    gres = gun_model.predict(source=img_path,    conf=CONF_GUN,    classes=[0])
+    gres = gun_model.predict(source=img_path,    conf=CONF_GUN,    classes=[1,2])
     pres = person_model.predict(source=img_path, conf=CONF_PERSON, classes=[0])
 
     gun_boxes    = gres[0].boxes.xyxy.tolist()  if len(gres[0].boxes)    else []

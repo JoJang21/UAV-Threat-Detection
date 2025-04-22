@@ -16,6 +16,10 @@ import cv2
 import matplotlib.pyplot as plt
 import math
 import numpy as np
+from PIL import Image, ImageEnhance
+
+#variable to set if augmenting images or not
+agument = 0
 
 # Load the YOLOv8 pose model
 model = YOLO("yolov8n-pose.pt")
@@ -94,6 +98,51 @@ def find_intersection(m1, b1, m2, b2):
     y = m1 * x + b1
     return x, y
 
+def extract_ground_truth_from_name(name):
+    name = name.lower()
+    if "level1" in name:
+        return 1
+    elif "level2" in name:
+        return 2
+    elif "level3" in name:
+        return 3
+    return None  # Unknown or unlabeled
+
+def augment_image(img):
+    img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    
+    augmentations = [
+        img,  # Original
+        np.array(img_pil.resize((int(img.shape[1]*1.2), int(img.shape[0]*1.2)))),  # Upscale
+        np.array(img_pil.resize((int(img.shape[1]*0.8), int(img.shape[0]*0.8)))),  # Downscale
+        np.array(ImageEnhance.Brightness(img_pil).enhance(0.5)),  # Darken
+        np.array(ImageEnhance.Brightness(img_pil).enhance(1.5)),  # Lighten
+    ]
+    
+    return [cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR) for img_np in augmentations]
+
+def augment_and_save_all(input_dir, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+    images = sorted([f for f in os.listdir(input_dir) if f.lower().endswith('.png')])
+
+    for filename in images:
+        path = os.path.join(input_dir, filename)
+        img_np = cv2.imread(path)
+
+        if img_np is None:
+            print(f" Warning: Failed to read image {filename}")
+            continue
+
+        augmented_images = augment_image(img_np)
+        base_name = os.path.splitext(filename)[0]
+
+        for idx, aug_img in enumerate(augmented_images):
+            aug_name = f"{base_name}_aug{idx}.png"
+            aug_path = os.path.join(output_dir, aug_name)
+            cv2.imwrite(aug_path, aug_img)
+            print(f"✅ Saved: {aug_path}")
+    
+
 def iterate_images(folder_path):
     """Iterates through all image files in a folder and prints their paths and sizes.
 
@@ -106,6 +155,8 @@ def iterate_images(folder_path):
         num_imgs+=1
         all_imgs+=[filename]
     all_imgs.sort(reverse=True)
+    correct = 0 
+    total = 0
 
     for filename in all_imgs:
         if filename.lower().endswith(('.png')):#, '.jpg', '.jpeg', '.gif', '.bmp')):
@@ -173,6 +224,8 @@ def iterate_images(folder_path):
                     print("l_arm_exists: ", l_arm_exists, " l_angle: ", l_angle)
                     print("r_arm_exists: ", r_arm_exists, " r_angle: ", r_angle)
                     print("pre one_hand: ", one_hand)
+                    gt_level = extract_ground_truth_from_name(img_name)
+                    total += 1
 
                     if img_name[0] == "p": #if detected gun is a pistol
                         print("PISTOL")
@@ -186,6 +239,7 @@ def iterate_images(folder_path):
                             pistol_hand = "RIGHT"
                         elif (not l_arm_exists) and (not r_arm_exists):
                             print("THREAT LEVEL 2")
+                            correct += (gt_level == 2)
                             continue
 
                         # below code will work mostly for one hand?????
@@ -193,6 +247,7 @@ def iterate_images(folder_path):
                             if (r_arm_exists and r_angle > 150):
                                 one_hand = False
                                 print("THREAT LEVEL 2")
+                                correct += (gt_level == 2)
                                 #continue
                             elif (r_arm_exists and r_angle < 100):
                                 one_hand = True
@@ -201,6 +256,7 @@ def iterate_images(folder_path):
                             if (l_arm_exists and l_angle > 150):
                                 one_hand = False
                                 print("THREAT LEVEL 2")
+                                correct += (gt_level == 2)
                                 #continue
                             elif (l_arm_exists and l_angle < 100):
                                 one_hand = True
@@ -227,9 +283,11 @@ def iterate_images(folder_path):
 
                                 if within_circle(r_shoulder, l_wrist, 20) or l_mod_wrist < r_shoulder[0] or l_mod_wrist > l_shoulder[0] + 20:
                                     print("THREAT LEVEL 2")
+                                    correct += (gt_level == 2)
                                     continue
                                 elif l_mod_wrist <= l_shoulder[0] or within_circle(l_shoulder, l_wrist, 20) or (r_eye_exists and (l_mod_wrist >= r_eye[0])): #use r_ear?
                                     print("THREAT LEVEL 3") #yes aim
+                                    correct += (gt_level == 3)
                                     continue
                                 else:
                                     print("One Left Hand: Couldn't Determine")
@@ -238,9 +296,11 @@ def iterate_images(folder_path):
 
                                 if within_circle(l_shoulder, r_wrist, 20) or r_mod_wrist > l_shoulder[0] or r_mod_wrist < max(r_shoulder[0] - 20, 0):
                                     print("THREAT LEVEL 2")
+                                    correct += (gt_level == 2)
                                     continue
                                 elif r_mod_wrist >=r_shoulder[0] or within_circle(r_shoulder, r_wrist, 20) or (l_eye_exists and (r_mod_wrist <= l_eye[0])): #use l_ear?
                                     print("THREAT LEVEL 3") # yes aim
+                                    correct += (gt_level == 3)
                                     continue
                                 else:
                                     print("One Right Hand: Couldn't Determine")
@@ -267,9 +327,11 @@ def iterate_images(folder_path):
 
                             if (wrist_midpoint > leftmost_facial_ftr) or (wrist_midpoint < rightmost_facial_ftr):
                                 print("THREAT LEVEL 2")
+                                correct += (gt_level == 2)
                                 continue
                             else:
                                 print("THREAT LEVEL 3")
+                                correct += (gt_level == 3)
                                 continue
 
 
@@ -300,13 +362,16 @@ def iterate_images(folder_path):
                         print("shoulders_width: ", shoulders_width)
                         if wrists_width > 0.7 * shoulders_width:
                             print("THREAT LEVEL 2, r1")
+                            correct += (gt_level == 2)
                             continue
                         if (l_wrist[0] < r_shoulder[0] and r_wrist[0] < max(r_shoulder[0] - 10, 0)) or (r_wrist[0] > l_shoulder[0] and l_wrist[0] > l_shoulder[0] + 10):
                             print("THREAT LEVEL 2, r2") # both wrists are away from shoulder,  -20? -15?
+                            correct += (gt_level == 2)
                             # check arm angle?????
                             continue
                         if (l_wrist[0] > l_shoulder[0] + 0.4*shoulders_width) or (r_wrist[0] < max(r_shoulder[0] - 0.4*shoulders_width, 0)): #0.5? 0.6?
                             print("THREAT LEVEL 2, r3") # both wrists are away from shoulder
+                            correct += (gt_level == 2)
                             # check arm angle?????
                             continue
 
@@ -341,24 +406,39 @@ def iterate_images(folder_path):
                                 if support_arm == "LEFT" and within_circle(r_shoulder, (x, y), 0.33 * shoulders_width) or \
                                    support_arm == "RIGHT" and within_circle(l_shoulder, (x, y), 0.33 * shoulders_width):  #0.2?, 0.1?
                                     print("THREAT LEVEL 3")
+                                    correct += (gt_level == 3)
                                     continue
                                 elif (support_arm == "LEFT" and within_circle(r_shoulder, (x, y), 0.5 * shoulders_width) \
                                       and l_angle >= 30 and l_angle <= 70) or \
                                      (support_arm == "RIGHT" and within_circle(l_shoulder, (x, y), 0.5 * shoulders_width) \
                                       and r_angle >= 30 and r_angle <= 70):  #0.2?, 0.1?
                                     print("THREAT LEVEL 3")
+                                    correct += (gt_level == 3)
                                     continue
                                 else:
                                     print("THREAT LEVEL 2")
+                                    correct += (gt_level == 2)
                                     continue
 
                 img.close()
             except Exception as e:
                 print(f"Error opening {image_path}: {e}")
 
+    accuracy_percent = (correct / total) * 100
+    print(f"Accuracy: {accuracy_percent:.2f}%")
+
+
+
 
 # Example usage:
 folder_path = "test_imgs/"
 save_dir = "results"
+agumented_dir = "augmented_imgs"
+
 os.makedirs(save_dir, exist_ok=True)
-iterate_images(folder_path)
+
+if agument:
+    augment_and_save_all(folder_path, agumented_dir)
+    iterate_images(agumented_dir)
+else:
+    iterate_images(folder_path)

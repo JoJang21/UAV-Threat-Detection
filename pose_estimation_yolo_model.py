@@ -48,7 +48,7 @@ def show_pose_result(result, title, save_path=None):
     # Save if path provided
     if save_path:
         cv2.imwrite(save_path, plotted_img)
-        print(f"✅ Saved: {save_path}")
+        print(f"Saved: {save_path}")
 
     # Display inline
     # plt.figure(figsize=(6, 8))
@@ -425,7 +425,7 @@ def iterate_images(folder_path):
                 print(f"Error opening {image_path}: {e}")
 
     accuracy_percent = (correct / total) * 100
-    print(f"Accuracy: {accuracy_percent:.2f}%")
+    print(f"\n\nAccuracy: {accuracy_percent:.2f}%")
 
 
 

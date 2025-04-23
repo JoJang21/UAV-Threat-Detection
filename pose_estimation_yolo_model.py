@@ -21,6 +21,7 @@ from PIL import Image, ImageEnhance
 #variable to set if augmenting images or not
 agument = 0
 
+
 # Load the YOLOv8 pose model
 model = YOLO("yolov8n-pose.pt")
 
@@ -121,7 +122,48 @@ def augment_image(img):
     
     return [cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR) for img_np in augmentations]
 
-def augment_and_save_all(input_dir, output_dir):
+
+def augment_image(img, mode="none"):
+    img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    w, h = img_pil.size
+
+    if mode == "none":
+        aug = img_pil
+    elif mode == "upscale":
+        aug = img_pil.resize((int(w * 1.2), int(h * 1.2)))
+    elif mode == "downscale":
+        aug = img_pil.resize((int(w * 0.8), int(h * 0.8)))
+    elif mode == "darken":
+        aug = ImageEnhance.Brightness(img_pil).enhance(0.5)
+    elif mode == "lighten":
+        aug = ImageEnhance.Brightness(img_pil).enhance(1.5)
+    elif mode == "contrast_up":
+        aug = ImageEnhance.Contrast(img_pil).enhance(1.5)
+    elif mode == "contrast_down":
+        aug = ImageEnhance.Contrast(img_pil).enhance(0.7)
+    elif mode == "rotate15":
+        aug = img_pil.rotate(15)
+    elif mode == "rotate-15":
+        aug = img_pil.rotate(-15)
+    elif mode == "sharpen":
+        aug = ImageEnhance.Sharpness(img_pil).enhance(2.0)
+    elif mode == "blur":
+        aug = ImageEnhance.Sharpness(img_pil).enhance(0.5)
+    elif mode == "desaturate":
+        aug = ImageEnhance.Color(img_pil).enhance(0.5)
+    elif mode == "saturate":
+        aug = ImageEnhance.Color(img_pil).enhance(1.5)
+    elif mode == "multiple":
+        aug = img_pil.resize((int(w * 1.1), int(h * 1.1)))  # Slight upscale
+        aug = ImageEnhance.Brightness(aug).enhance(1.2)     # Slight brighten
+        aug = ImageEnhance.Contrast(aug).enhance(1.3)       # Contrast boost
+        aug = ImageEnhance.Sharpness(aug).enhance(1.5)      # Sharpen slightly
+    else:
+        raise ValueError(f"Unsupported mode: {mode}")
+
+    return cv2.cvtColor(np.array(aug), cv2.COLOR_RGB2BGR)
+
+def augment_and_save_all(input_dir, output_dir, mode="none"):
     os.makedirs(output_dir, exist_ok=True)
     images = sorted([f for f in os.listdir(input_dir) if f.lower().endswith('.png')])
 
@@ -130,17 +172,16 @@ def augment_and_save_all(input_dir, output_dir):
         img_np = cv2.imread(path)
 
         if img_np is None:
-            print(f" Warning: Failed to read image {filename}")
+            print(f"Warning: Failed to read image {filename}")
             continue
 
-        augmented_images = augment_image(img_np)
+        aug_img = augment_image(img_np, mode=mode)
         base_name = os.path.splitext(filename)[0]
+        aug_name = f"{base_name}_aug_{mode}.png"
+        aug_path = os.path.join(output_dir, aug_name)
+        cv2.imwrite(aug_path, aug_img)
+        print(f"Saved: {aug_path}")
 
-        for idx, aug_img in enumerate(augmented_images):
-            aug_name = f"{base_name}_aug{idx}.png"
-            aug_path = os.path.join(output_dir, aug_name)
-            cv2.imwrite(aug_path, aug_img)
-            print(f"✅ Saved: {aug_path}")
     
 
 def iterate_images(folder_path):
@@ -440,8 +481,25 @@ agumented_dir = "augmented_imgs"
 
 os.makedirs(save_dir, exist_ok=True)
 
+'''
+    mode == "none"
+    mode == "upscale":
+    mode == "downscale":
+    mode == "darken":
+    mode == "lighten":
+    mode == "contrast_up":
+    mode == "contrast_down":
+    mode == "rotate15":
+    mode == "rotate-15":
+    mode == "sharpen":
+    mode == "blur":
+    mode == "desaturate":
+    mode == "saturate":
+    mode == "multiple":
+'''
 if agument:
-    augment_and_save_all(folder_path, agumented_dir)
+    augmentation_mode = "none" # Change this to the desired augmentation mode
+    augment_and_save_all(folder_path, agumented_dir, mode=augmentation_mode)
     iterate_images(agumented_dir)
 else:
     iterate_images(folder_path)

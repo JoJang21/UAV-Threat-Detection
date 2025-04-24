@@ -20,6 +20,7 @@ from PIL import Image, ImageEnhance
 
 #variable to set if augmenting images or not
 agument = 0
+video = 0
 
 
 # Load the YOLOv8 pose model
@@ -182,7 +183,66 @@ def augment_and_save_all(input_dir, output_dir, mode="none"):
         cv2.imwrite(aug_path, aug_img)
         print(f"Saved: {aug_path}")
 
-    
+def extract_frames(input_video_path, output_folder):
+    os.makedirs(output_folder, exist_ok=True)
+    cap = cv2.VideoCapture(input_video_path)
+    frame_idx = 0
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        frame_name = f"frame_{frame_idx:05d}.png"
+        frame_path = os.path.join(output_folder, frame_name)
+        cv2.imwrite(frame_path, frame)
+        frame_idx += 1
+
+    cap.release()
+    print(f"Extracted {frame_idx} frames to: {output_folder}")
+
+
+def create_video_from_frames(input_folder, output_video_path, fps=30):
+    frame_files = sorted([f for f in os.listdir(input_folder) if f.lower().endswith('.png')])
+
+    if not frame_files:
+        raise RuntimeError(f"No PNG frames found in {input_folder}")
+
+    first_frame_path = os.path.join(input_folder, frame_files[0])
+    first_frame = cv2.imread(first_frame_path)
+
+    if first_frame is None:
+        raise RuntimeError(f"Could not load the first frame: {first_frame_path}")
+
+    height, width, _ = first_frame.shape
+    print(f"Frame resolution detected: {width}x{height}, {len(frame_files)} frames total")
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
+
+    written = 0
+    for f in frame_files:
+        path = os.path.join(input_folder, f)
+        frame = cv2.imread(path)
+
+        if frame is None:
+            print(f"Skipping unreadable frame: {f}")
+            continue
+
+        if frame.shape[0] != height or frame.shape[1] != width:
+            print(f"Skipping mismatched resolution: {f}")
+            continue
+
+        out.write(frame)
+        written += 1
+
+    out.release()
+
+    if written == 0:
+        raise RuntimeError("No valid frames written to video.")
+
+    print(f"Video successfully created at: {output_video_path} with {written} frames.")
+   
 
 def iterate_images(folder_path):
     """Iterates through all image files in a folder and prints their paths and sizes.
@@ -209,13 +269,29 @@ def iterate_images(folder_path):
                 #display(img)
                 result = model(image_path)
                 save_path = os.path.join(save_dir, f"pose_{img_name}")
-                show_pose_result(result, img_name, save_path=save_path)
+
+                keypoints_all = result[0].keypoints.xy
+                if not keypoints_all or all(p.shape[0] < 6 for p in keypoints_all):
+                    print(f"No detections in {img_name}. Saving original image.")
+                    img_cv2 = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+                    cv2.putText(img_cv2, "No person detected", (30, 30),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    cv2.imwrite(save_path, img_cv2)
+                    continue  # Skip the rest of the logic
+                else:
+                    # Save annotated image with pose skeleton
+                    show_pose_result(result, img_name, save_path=save_path)
+
                 gt_level = extract_ground_truth_from_name(img_name)
                 total += 1
                 predicted = None
 
-                for person in result[0].keypoints.xy:
+                for person in keypoints_all:
                     keypoints = person.cpu().numpy()
+                    if keypoints.shape[0] < 11:
+                        print(f"Incomplete keypoints in {img_name}, skipping person")
+                        continue
+
                     l_shoulder = keypoints[5]
                     r_shoulder = keypoints[6]
                     l_elbow = keypoints[7]
@@ -479,6 +555,10 @@ folder_path = "test_imgs/"
 save_dir = "results"
 agumented_dir = "augmented_imgs"
 
+input_video = "test_vid.mp4"
+frame_dir = "frames"
+final_output = "output_video.mp4"
+
 os.makedirs(save_dir, exist_ok=True)
 
 '''
@@ -497,9 +577,22 @@ os.makedirs(save_dir, exist_ok=True)
     mode == "saturate":
     mode == "multiple":
 '''
-if agument:
-    augmentation_mode = "none" # Change this to the desired augmentation mode
-    augment_and_save_all(folder_path, agumented_dir, mode=augmentation_mode)
-    iterate_images(agumented_dir)
+if video:
+    # Step 1: Extract
+    #print("Extracting frames from video...")
+    #extract_frames(input_video, frame_dir)
+
+    # Step 2: Analyze pose and threat
+    print("Going through the frames")
+    iterate_images(frame_dir)
+
+    # Step 3: Compile into video
+    print("Creating video from frames...")
+    create_video_from_frames(save_dir, final_output, fps=30)
 else:
-    iterate_images(folder_path)
+    if agument:
+        augmentation_mode = "none" # Change this to the desired augmentation mode
+        augment_and_save_all(folder_path, agumented_dir, mode=augmentation_mode)
+        iterate_images(agumented_dir)
+    else:
+        iterate_images(folder_path)

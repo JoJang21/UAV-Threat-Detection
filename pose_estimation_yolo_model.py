@@ -271,7 +271,7 @@ def iterate_images(folder_path):
                 save_path = os.path.join(save_dir, f"pose_{img_name}")
 
                 keypoints_all = result[0].keypoints.xy
-                if not keypoints_all or all(p.shape[0] < 6 for p in keypoints_all):
+                if len(keypoints_all) == 0 or all(p.shape[0] < 6 for p in keypoints_all):
                     print(f"No detections in {img_name}. Saving original image.")
                     img_cv2 = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
                     cv2.putText(img_cv2, "No person detected", (30, 30),
@@ -579,8 +579,8 @@ os.makedirs(save_dir, exist_ok=True)
 '''
 if video:
     # Step 1: Extract
-    #print("Extracting frames from video...")
-    #extract_frames(input_video, frame_dir)
+    print("Extracting frames from video...")
+    extract_frames(input_video, frame_dir)
 
     # Step 2: Analyze pose and threat
     print("Going through the frames")

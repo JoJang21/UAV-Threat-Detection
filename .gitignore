@@ -4,4 +4,5 @@ detection/datasets/
 detection/frames/
 detection/results/
 detection/obj_detect_imgs/
-detection/fra/
+frames/
+results/

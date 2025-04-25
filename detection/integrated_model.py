@@ -23,7 +23,7 @@ CONF_PERSON       = 0.2
 folder_path = "test_imgs/"
 agumented_dir = "augmented_imgs"
 
-input_video = "Rifle_Model.mp4" # "test_vid_2.MOV" # "test_vid.mp4" #  
+input_video = "Rifle_Model_Two_People.mp4"#"Rifle_Model.mp4" # "test_vid_2.MOV" # "test_vid.mp4" #  
 frame_dir = "frames"
 results_dir = "results"
 # ───────────────────────────────────────────────────────────────────────────────
@@ -433,8 +433,8 @@ if video:
 
     # Step 2: Analyze pose and threat
     print("Going through the frames")
-    analyze_frames(FRAMES_DIR, verbose)
-    #analyze_frames2(FRAMES_DIR, verbose)
+    #analyze_frames(FRAMES_DIR, verbose)
+    analyze_frames2(FRAMES_DIR, verbose)
 
     # Step 3: Compile into video
     print("Creating video from frames...")

@@ -253,7 +253,7 @@ def analyze_frames(folder_path, verbose):
         # 1) Inference
         pres = person_model.predict(source=img_path, conf=CONF_PERSON, classes=[0])
         print("PRES: ", pres[0].boxes)
-        gres = gun_model.predict(source=img_path,    conf=CONF_GUN,    classes=[1,2])
+        gres = gun_model.predict(source=img_path,    conf=0.2,    classes=[1,2])
         print("GRES", gres[0].boxes.xyxy, gres[0].boxes.cls)
         
 
@@ -433,8 +433,8 @@ if video:
 
     # Step 2: Analyze pose and threat
     print("Going through the frames")
-    #analyze_frames(FRAMES_DIR, verbose)
-    analyze_frames2(FRAMES_DIR, verbose)
+    analyze_frames(FRAMES_DIR, verbose)
+    #analyze_frames2(FRAMES_DIR, verbose)
 
     # Step 3: Compile into video
     print("Creating video from frames...")

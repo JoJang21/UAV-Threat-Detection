@@ -10,20 +10,20 @@ import pose_estimator as pest
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 GUN_MODEL_PATH    = 'runs/detect/gun_detection7/weights/last.pt'
-PERSON_MODEL_PATH = 'yolov8l.pt'    # COCO-pretrained, HOW TO GET xl.pt?????????
+PERSON_MODEL_PATH = 'yolov8x.pt'    # COCO-pretrained, or? yolov8l.pt
 IMAGE_DIR         = './testset/train/images'
 OUTPUT_DIR        = './testset/train/merged_output'
 OBJ_DETECT_DIR    = 'obj_detect_imgs'
 IOU_THRESHOLD     = 0.01
 CONF_GUN          = 0.5
-CONF_PERSON       = 0.5
+CONF_PERSON       = 0.2
 
 
 
 folder_path = "test_imgs/"
 agumented_dir = "augmented_imgs"
 
-input_video = "test_vid_2.MOV" # "test_vid.mp4" #  
+input_video = "Rifle_Model.mp4" # "test_vid_2.MOV" # "test_vid.mp4" #  
 frame_dir = "frames"
 results_dir = "results"
 # ───────────────────────────────────────────────────────────────────────────────
@@ -61,10 +61,12 @@ def iou(a, b):
 
 def analyze_frames2(folder_path, verbose):
     for img_path in glob.glob(os.path.join(folder_path, '*.png')):#jpg')):
+        '''
         frame_img = cv2.imread(img_path) 
         kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]]) 
         sharpened_image = cv2.filter2D(frame_img, -1, kernel) 
         cv2.imwrite(img_path, sharpened_image)
+        '''
         
   
         # 1) Inference
@@ -427,7 +429,7 @@ video = True
 if video:
     # Step 1: Extract
     print("Extracting frames from video...")
-    #pest.extract_frames(input_video, FRAMES_DIR)
+    pest.extract_frames(input_video, FRAMES_DIR)
 
     # Step 2: Analyze pose and threat
     print("Going through the frames")

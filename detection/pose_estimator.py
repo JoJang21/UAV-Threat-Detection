@@ -530,11 +530,11 @@ def pose_process(image_path, human_list, save_dir, verbose):
                                 yes_aim += 1
                                 aim_list.append(1)
                                 continue
-                            elif (support_arm == "LEFT" and within_circle(r_shoulder, (x, y), 0.5 * shoulders_width) \
+                            elif (support_arm == "LEFT" and within_circle(r_shoulder, (x, y), 0.7 * shoulders_width) \
                                     and l_angle >= 30 and l_angle <= 70) or \
-                                    (support_arm == "RIGHT" and within_circle(l_shoulder, (x, y), 0.5 * shoulders_width) \
+                                    (support_arm == "RIGHT" and within_circle(l_shoulder, (x, y), 0.7 * shoulders_width) \
                                     and r_angle >= 30 and r_angle <= 70):  #0.2?, 0.1?
-                                print("THREAT LEVEL 3")
+                                print("THREAT LEVEL 3") # originally 0.5 * shoulders_width
                                 yes_aim += 1
                                 aim_list.append(1)
                                 continue

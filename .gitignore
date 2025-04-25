@@ -6,3 +6,4 @@ detection/results/
 detection/obj_detect_imgs/
 frames/
 results/
+detection/yolov8x.pt

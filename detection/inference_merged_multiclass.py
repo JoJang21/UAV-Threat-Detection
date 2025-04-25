@@ -5,7 +5,7 @@ from shapely.geometry import box
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 GUN_MODEL_PATH    = 'runs/detect/gun_detection7/weights/last.pt'
-PERSON_MODEL_PATH = 'yolov8l.pt'    # COCO-pretrained
+PERSON_MODEL_PATH = 'yolov8xl.pt'    # COCO-pretrained  l.pt
 IMAGE_DIR         = './testset/train/images'
 OUTPUT_DIR        = './testset/train/merged_output'
 IOU_THRESHOLD     = 0.01
@@ -15,8 +15,21 @@ CONF_PERSON       = 0.5
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-gun_model    = YOLO(GUN_MODEL_PATH)
-person_model = YOLO(PERSON_MODEL_PATH)
+curr_dir = os.getcwd()
+
+FULL_GUN_MODEL_PATH = os.path.join(curr_dir, GUN_MODEL_PATH)
+FULL_PERSON_MODEL_PATH = os.path.join(curr_dir, PERSON_MODEL_PATH)
+gun_model    = YOLO(FULL_GUN_MODEL_PATH)
+person_model = YOLO(FULL_PERSON_MODEL_PATH)
+
+IMAGE_DIR = os.path.join(curr_dir, IMAGE_DIR)
+OUTPUT_DIR = os.path.join(curr_dir, OUTPUT_DIR)
+
+print(curr_dir)
+print(FULL_GUN_MODEL_PATH)
+print(FULL_PERSON_MODEL_PATH)
+print(IMAGE_DIR)
+print(OUTPUT_DIR)
 
 def iou(a, b):
     A = box(*a); B = box(*b)
@@ -26,8 +39,8 @@ def iou(a, b):
 
 for img_path in glob.glob(os.path.join(IMAGE_DIR, '*.jpg')):
     # 1) Inference
-    gres = gun_model.predict(source=img_path,    conf=CONF_GUN,    classes=[1,2])
-    pres = person_model.predict(source=img_path, conf=CONF_PERSON, classes=[0])
+    gres = gun_model.predict(source=img_path,    conf=CONF_GUN)#,    classes=[1,2])
+    pres = person_model.predict(source=img_path, conf=CONF_PERSON)#, classes=[0])
 
     # pair up each gun box with its predicted class (1=pistol, 2=rifle)
     gun_boxes = []
@@ -43,6 +56,7 @@ for img_path in glob.glob(os.path.join(IMAGE_DIR, '*.jpg')):
 
     # 2) Match & union
     for g_xyxy, g_cls in gun_boxes:
+        print("g_cls: ", g_cls)
         if not person_boxes:
             continue
         # find the person with highest IoU
@@ -97,13 +111,14 @@ for img_path in glob.glob(os.path.join(IMAGE_DIR, '*.jpg')):
             img, label,
             (text_x, text_y),
             font, font_scale,
-            (255,255,255),  # white text
+            (0,0,0),  # black text, white text is (255,255,255)
             thickness,
             lineType=cv2.LINE_AA
         )
 
     # optionally draw any unmatched guns/people in thinner boxes…
 
+    print(merged)
     # 4) Save
     out_path = os.path.join(OUTPUT_DIR, os.path.basename(img_path))
     cv2.imwrite(out_path, img)

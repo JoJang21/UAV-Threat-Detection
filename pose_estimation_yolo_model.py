@@ -19,8 +19,8 @@ import numpy as np
 from PIL import Image, ImageEnhance
 
 #variable to set if augmenting images or not
-agument = 0
-video = 0
+agument = False
+video = True
 
 
 # Load the YOLOv8 pose model
@@ -244,7 +244,7 @@ def create_video_from_frames(input_folder, output_video_path, fps=30):
     print(f"Video successfully created at: {output_video_path} with {written} frames.")
    
 
-def iterate_images(folder_path):
+def iterate_images(folder_path, verbose):
     """Iterates through all image files in a folder and prints their paths and sizes.
 
     Args:
@@ -302,19 +302,20 @@ def iterate_images(folder_path):
                     r_eye = keypoints[2]
                     l_ear = keypoints[3]
                     r_ear = keypoints[4]
-                    print(f"Left Shoulder: {l_shoulder}")
-                    print(f"Right Shoulder: {r_shoulder}")
-                    print(f"Left Elbow: {l_elbow}")
-                    print(f"Right Elbow: {r_elbow}")
-                    print(f"Left Wrist: {l_wrist}")
-                    print(f"Right Wrist: {r_wrist}")
-                    print(f"Left Eye: {l_eye}")
-                    print(f"Right Eye: {r_eye}")
-                    print(f"Left Ear: {l_ear}")
-                    print(f"Right Ear: {r_ear}")
                     x = l_shoulder[0]
                     y = l_shoulder[1]
-                    print("x, y: ", x, " ", y)
+                    if verbose:
+                        print(f"Left Shoulder: {l_shoulder}")
+                        print(f"Right Shoulder: {r_shoulder}")
+                        print(f"Left Elbow: {l_elbow}")
+                        print(f"Right Elbow: {r_elbow}")
+                        print(f"Left Wrist: {l_wrist}")
+                        print(f"Right Wrist: {r_wrist}")
+                        print(f"Left Eye: {l_eye}")
+                        print(f"Right Eye: {r_eye}")
+                        print(f"Left Ear: {l_ear}")
+                        print(f"Right Ear: {r_ear}")
+                        print("x, y: ", x, " ", y)
 
                     one_hand = False
                     pistol_hand = "LEFT"
@@ -341,12 +342,13 @@ def iterate_images(folder_path):
                     else:
                         one_hand = True
 
-                    print("l_arm_exists: ", l_arm_exists, " l_angle: ", l_angle)
-                    print("r_arm_exists: ", r_arm_exists, " r_angle: ", r_angle)
-                    print("pre one_hand: ", one_hand)
+                    if verbose:
+                        print("l_arm_exists: ", l_arm_exists, " l_angle: ", l_angle)
+                        print("r_arm_exists: ", r_arm_exists, " r_angle: ", r_angle)
+                        print("pre one_hand: ", one_hand)
                     
                     if img_name[0] == "p": #if detected gun is a pistol
-                        print("PISTOL")
+                        #print("PISTOL")
                         # Differentiating between 1 hand and 2 hands:  if one arm is obtuse angle (>135), or if arm (wrist and elbow) doesnt exist
 
                         if (l_arm_exists and not r_arm_exists):
@@ -356,7 +358,7 @@ def iterate_images(folder_path):
                             one_hand = True
                             pistol_hand = "RIGHT"
                         elif (not l_arm_exists) and (not r_arm_exists):
-                            print("THREAT LEVEL 1")
+                            #print("THREAT LEVEL 1")
                             predicted = 1
                             continue
 
@@ -364,7 +366,7 @@ def iterate_images(folder_path):
                         if (l_arm_exists and l_angle > 120):
                             if (r_arm_exists and r_angle > 150):
                                 one_hand = False
-                                print("THREAT LEVEL 1")
+                                #print("THREAT LEVEL 1")
                                 predicted = 1
                                 #continue
                             elif (r_arm_exists and r_angle < 100):
@@ -373,7 +375,7 @@ def iterate_images(folder_path):
                         if (r_arm_exists and r_angle > 120):
                             if (l_arm_exists and l_angle > 150):
                                 one_hand = False
-                                print("THREAT LEVEL 1")
+                                #print("THREAT LEVEL 1")
                                 predicted = 1
                                 #continue
                             elif (l_arm_exists and l_angle < 100):
@@ -400,20 +402,20 @@ def iterate_images(folder_path):
                             if pistol_hand == "LEFT":
 
                                 if within_circle(r_shoulder, l_wrist, 20) or l_mod_wrist < r_shoulder[0] or l_mod_wrist > l_shoulder[0] + 20:
-                                    print("THREAT LEVEL 1")
+                                    #print("THREAT LEVEL 1")
                                     predicted = 1
                                     continue
                                 elif l_mod_wrist <= l_shoulder[0] or within_circle(l_shoulder, l_wrist, 20) or (r_eye_exists and (l_mod_wrist >= r_eye[0])): #use r_ear?
-                                    print("THREAT LEVEL 3") #yes aim
+                                    #print("THREAT LEVEL 3") #yes aim
                                     predicted = 3
                                     continue
                                 else:
-                                    print("One Left Hand: Couldn't Determine")
+                                    #print("One Left Hand: Couldn't Determine")
                                     continue
                             elif pistol_hand == "RIGHT":
 
                                 if within_circle(l_shoulder, r_wrist, 20) or r_mod_wrist > l_shoulder[0] or r_mod_wrist < max(r_shoulder[0] - 20, 0):
-                                    print("THREAT LEVEL 1")
+                                    #print("THREAT LEVEL 1")
                                     predicted = 1
                                     continue
                                 elif r_mod_wrist >=r_shoulder[0] or within_circle(r_shoulder, r_wrist, 20) or (l_eye_exists and (r_mod_wrist <= l_eye[0])): #use l_ear?
@@ -476,8 +478,9 @@ def iterate_images(folder_path):
                         #  if angle created by other arm is very small (less than 30 degrees) (means wrist is close to shoulder)
                         wrists_width = np.linalg.norm(np.abs(l_wrist - r_wrist))
                         shoulders_width = np.linalg.norm(np.abs(l_shoulder - r_shoulder))
-                        print("wrists_width: ", wrists_width)
-                        print("shoulders_width: ", shoulders_width)
+                        if verbose:
+                            print("wrists_width: ", wrists_width)
+                            print("shoulders_width: ", shoulders_width)
                         if wrists_width > 0.7 * shoulders_width:
                             print("THREAT LEVEL 1, r1")
                             predicted = 1
@@ -584,7 +587,7 @@ if video:
 
     # Step 2: Analyze pose and threat
     print("Going through the frames")
-    iterate_images(frame_dir)
+    iterate_images(frame_dir, 0)
 
     # Step 3: Compile into video
     print("Creating video from frames...")
@@ -593,6 +596,6 @@ else:
     if agument:
         augmentation_mode = "none" # Change this to the desired augmentation mode
         augment_and_save_all(folder_path, agumented_dir, mode=augmentation_mode)
-        iterate_images(agumented_dir)
+        iterate_images(agumented_dir, 0)
     else:
-        iterate_images(folder_path)
+        iterate_images(folder_path, 0)

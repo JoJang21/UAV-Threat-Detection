@@ -23,7 +23,7 @@ CONF_PERSON       = 0.2
 folder_path = "test_imgs/"
 agumented_dir = "augmented_imgs"
 
-input_video = "Rifle_Model.mp4" # "test_vid_2.MOV" # "test_vid.mp4" #  
+input_video = "Rifle_Model_Two_People.mp4"# "Rifle_Model.mp4" # # "test_vid_2.MOV" # "test_vid.mp4" #  
 frame_dir = "frames"
 results_dir = "results"
 # ───────────────────────────────────────────────────────────────────────────────
@@ -190,15 +190,15 @@ def analyze_frames2(folder_path, verbose):
                 threat_level_color = (0,0,0)
     
         threat_level_txt = threat_level_txt + add_txt
-        text_width, text_height = cv2.getTextSize(threat_level_txt, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)[0]
+        text_width, text_height = cv2.getTextSize(threat_level_txt, cv2.FONT_HERSHEY_SIMPLEX,2, 6)[0]
         textX = img_width//2
-        cv2.rectangle(img, (textX - text_width//2, 0), (textX + text_width//2, text_height + 5), threat_level_color, -1)
+        cv2.rectangle(img, (textX - text_width//2, 0), (textX + text_width//2, text_height + 20), threat_level_color, -1)
         cv2.putText(
                 img, threat_level_txt,
-                (textX - text_width//3, text_height),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                (textX - text_width//2, text_height + 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 2.0,
                 threat_text_color,
-                2,
+                6,
                 lineType=cv2.LINE_AA
         )
         
@@ -253,7 +253,7 @@ def analyze_frames(folder_path, verbose):
         # 1) Inference
         pres = person_model.predict(source=img_path, conf=CONF_PERSON, classes=[0])
         print("PRES: ", pres[0].boxes)
-        gres = gun_model.predict(source=img_path,    conf=CONF_GUN,    classes=[1,2])
+        gres = gun_model.predict(source=img_path,    conf=0.2,    classes=[1,2])
         print("GRES", gres[0].boxes.xyxy, gres[0].boxes.cls)
         
 
@@ -366,15 +366,15 @@ def analyze_frames(folder_path, verbose):
                 threat_level_color = (0,0,0)
     
         threat_level_txt = threat_level_txt + add_txt
-        text_width, text_height = cv2.getTextSize(threat_level_txt, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)[0]
+        text_width, text_height = cv2.getTextSize(threat_level_txt, cv2.FONT_HERSHEY_SIMPLEX,2, 6)[0]
         textX = img_width//2
-        cv2.rectangle(img, (textX - text_width//2, 0), (textX + text_width//2, text_height + 5), threat_level_color, -1)
+        cv2.rectangle(img, (textX - text_width//2, 0), (textX + text_width//2, text_height + 20), threat_level_color, -1)
         cv2.putText(
                 img, threat_level_txt,
-                (textX - text_width//3, text_height),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                (textX - text_width//2, text_height + 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 2.0,
                 threat_text_color,
-                2,
+                6,
                 lineType=cv2.LINE_AA
         )
         
@@ -433,8 +433,8 @@ if video:
 
     # Step 2: Analyze pose and threat
     print("Going through the frames")
-    #analyze_frames(FRAMES_DIR, verbose)
-    analyze_frames2(FRAMES_DIR, verbose)
+    #analyze_frames2(FRAMES_DIR, verbose)
+    analyze_frames(FRAMES_DIR, verbose)
 
     # Step 3: Compile into video
     print("Creating video from frames...")
